@@ -1,0 +1,54 @@
+-- Criar tabela Category
+CREATE TABLE if not exists Category (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    createdAt TIMESTAMP DEFAULT NOW(),
+    updatedAt TIMESTAMP DEFAULT NOW()
+);
+
+-- Criar tabela Product
+CREATE TABLE if not exists Product (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category_id INT REFERENCES Category(id),
+    price NUMERIC(10, 2) NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    createdAt TIMESTAMP DEFAULT NOW(),
+    updatedAt TIMESTAMP DEFAULT NOW()
+);
+
+-- Criar tabela Stock
+CREATE TABLE if not exists Stock (
+    product_id INT PRIMARY KEY REFERENCES Product(id),
+    qty_in_stock INT NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    createdAt TIMESTAMP DEFAULT NOW(),
+    updatedAt TIMESTAMP DEFAULT NOW()
+);
+
+-- Criar tabela Client
+CREATE TABLE if not exists Client (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL
+);
+
+-- Criar tabela Sales
+CREATE TABLE if not exists Sales (
+    id SERIAL PRIMARY KEY,
+    client_id INT NOT NULL REFERENCES Client(id),
+    product_id INT NOT NULL REFERENCES Product(id),
+    qty INT NOT NULL CHECK (qty > 0),
+    status VARCHAR(10) NOT NULL CHECK (status IN ('FAILED', 'DONE')),
+    createdAt TIMESTAMP DEFAULT NOW()
+);
+
+-- Criar tabela Reviwers
+CREATE TABLE if not exists Reviwers (
+    id SERIAL PRIMARY KEY,
+    client_id INT NOT NULL REFERENCES Client(id),
+    sales_id INT NOT NULL REFERENCES Sales(id),
+    math INT NOT NULL CHECK (math BETWEEN 1 AND 5),
+    description TEXT
+);

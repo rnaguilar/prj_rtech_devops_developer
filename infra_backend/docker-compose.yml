@@ -1,0 +1,100 @@
+version: "3.8"
+
+services:
+  # Serviço FastAPI
+  fastapi:
+    image: python:3.10-slim
+    container_name: fastapi
+    working_dir: /app
+    volumes:
+      - ./app:/app
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    depends_on:
+      - postgres
+      - mongodb
+      - redis
+
+  # Banco de Dados PostgreSQL (Primário)
+  postgres_backend:
+    image: postgres:latest
+    container_name: postgres_backend
+    ports:
+      - "8088:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: postgres
+    volumes:
+      - ./postgres_backend/data:/var/lib/postgresql/data
+      - ./postgres_backend/init-db:/docker-entrypoint-initdb.d
+  
+  # Banco de Dados PostgreSQL (Backup)
+  postgres_backup:
+    image: postgres:latest
+    container_name: postgres_backup
+    ports:
+      - "8089:5433"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: postgres
+    volumes:
+      - ./postgres_backup/data:/var/lib/postgresql/data
+      - ./postgres_backup/init-db:/docker-entrypoint-initdb.d
+
+  # Banco de Dados MongoDB
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  # Serviço de Backup MongoDB
+  mongodb_backup:
+    image: mongo:6.0
+    container_name: mongodb_backup
+    depends_on:
+      - mongodb
+    command: >
+      sh -c "
+      while true; do 
+        mongodump --host=mongodb --out=/backup/$(date +%F_%H-%M-%S);
+        sleep 86400; 
+      done
+      "
+    volumes:
+      - ./mongodb_backup:/backup
+
+  # Cache Redis
+  redis:
+    image: redis:7
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # Monitoramento Grafana
+  grafana:
+    image: grafana/grafana:10
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - mongodb
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:
+  grafana_data:
